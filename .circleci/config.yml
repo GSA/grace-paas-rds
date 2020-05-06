@@ -34,7 +34,6 @@ workflows:
     jobs:
       - lint_cmd
       - test_cmd
-      - integration_test
       - release_cmd:
           filters:
             branches:
