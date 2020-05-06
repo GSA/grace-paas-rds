@@ -1,0 +1,13 @@
+name: 'GSA/grace-'
+description: 'Command to generate Terrafrom JSON Configuration Syntax to create an RDS from a ServiceNow ticket (json)'
+license: cc0-1.0
+openSourceProject: 1
+governmentWideReuseProject: 1
+tags:
+    - open-source
+    - opensource
+    - grace
+    - devsecops
+    - grace-paas
+contact:
+    email: grace-staff@gsa.gov
