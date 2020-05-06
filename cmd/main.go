@@ -57,6 +57,10 @@ type ritm struct {
 	Username                           string `json:"username"`                              // "TestUser"
 }
 
+type terraform struct {
+	Map map[string]interface{}
+}
+
 func handleRITM(inFile, outFile string) {
 	ritm, err := parseRITM(inFile)
 	if err != nil {
@@ -92,27 +96,6 @@ func parseRITM(inFile string) (*ritm, error) {
 	return &ritm, nil
 }
 
-func parseJSONFile(inFile string) (map[string]interface{}, error) {
-	jsonFile, err := os.Open(inFile) // #nosec G304
-	if err != nil {
-		return nil, err
-	}
-
-	defer jsonFile.Close() // #nosec G307
-	byteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		return nil, err
-	}
-
-	var obj map[string]interface{}
-	err = json.Unmarshal(byteValue, &obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return obj, nil
-}
-
 func randStart() int {
 	min := backupStartHour * 60
 	max := int(math.Abs(float64(backupEndHour-backupStartHour)))*60 - backupWindowSize
@@ -133,16 +116,9 @@ func maintenanceWindow(m int) string {
 
 // nolint: funlen
 func generateTerraform(ritm *ritm, outFile string) error {
-	defaults, err := parseJSONFile("rds_module_defaults.json")
-	if err != nil {
-		return err
-	}
-
-	engines, err := parseJSONFile("engines.json")
-	if err != nil {
-		return err
-	}
-
+	var tf terraform
+	defaults := tf.rdsModuleDefaults()
+	engines := tf.rdsEngineDefaults()
 	family := ritm.Engine
 	options := engines[family].(map[string]interface{})
 	engine := options["engine"]
@@ -155,7 +131,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	defaults["engine_version"] = options["engine_version"]
 	defaults["enabled_cloudwatch_logs_exports"] = options["enabled_cloudwatch_logs_exports"]
 	defaults["instance_class"] = options[ritm.Size].(map[string]interface{})["instance_class"]
-	defaults["allocated_storage"] = int(options[ritm.Size].(map[string]interface{})["allocated_storage"].(float64))
+	defaults["allocated_storage"] = options[ritm.Size].(map[string]interface{})["allocated_storage"]
 	defaults["name"] = ritm.Name
 	defaults["username"] = ritm.Username
 	defaults["password"] = "${var.db_password}"
@@ -165,10 +141,11 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	defaults["final_snapshot_identifier"] = ritm.Identifier + "-final-shapshot"
 	defaults["major_engine_version"] = options["major_engine_version"]
 	defaults["max_allocated_storage"] = 3 * defaults["allocated_storage"].(int)
-	defaults["monitoring_interval"], err = strconv.Atoi(ritm.MonitoringInterval)
+	mi, err := strconv.Atoi(ritm.MonitoringInterval)
 	if err != nil {
 		fmt.Printf("WARNING: Error converting monitoring_interval to integer: %v\n", err)
 	}
+	defaults["monitoring_interval"] = mi
 	defaults["monitoring_role_name"] = ritm.Identifier + "-monitoring-role"
 	/* Enable once custom property/option groups are defined
 	if engine == "mysql" {
@@ -192,7 +169,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	}
 	defaults["vpc_security_group_ids"] = [...]string{"${aws_security_group." + ritm.Identifier + ".id}"}
 
-	tf := map[string]interface{}{
+	tf.Map = map[string]interface{}{
 		"variable": [...]map[string]interface{}{{
 			"db_password": map[string]interface{}{
 				"type":        "string",
@@ -255,7 +232,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 		},
 	}
 
-	b, err := json.MarshalIndent(tf, "", "  ")
+	b, err := json.MarshalIndent(tf.Map, "", "  ")
 	if err != nil {
 		return err
 	}
