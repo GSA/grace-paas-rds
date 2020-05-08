@@ -32,7 +32,7 @@ const (
 	backupEndHour    = 9     // 0900 UTC 5:00AM ET
 	backupWindowSize = 30    // minutes
 	maintenanceDay   = "Thu" // Thursday...assuming we aren't crossing a day boundary
-	yes              = "yes" // ServiceNow uses "yes"/"no" instead of booleans
+	yes              = "Yes" // ServiceNow uses "Yes"/"No" instead of booleans
 )
 
 // ritm type for the parsed ServiceNow RITM results JSON
