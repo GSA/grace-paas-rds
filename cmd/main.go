@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -123,7 +124,8 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	options := engines[family].(map[string]interface{})
 	engine := options["engine"]
 	rand.Seed(time.Now().UnixNano())
-	backupStartTime := randStart()
+	backupStartTime := randStart()                              // Number of minutes after start of backupwindow start hour
+	resourceID := strings.ReplaceAll(ritm.Identifier, "-", "_") // Conforms to our naming standard
 
 	// Override and add to defaults
 	defaults["identifier"] = ritm.Identifier
@@ -131,15 +133,15 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	defaults["engine_version"] = options["engine_version"]
 	defaults["enabled_cloudwatch_logs_exports"] = options["enabled_cloudwatch_logs_exports"]
 	defaults["instance_class"] = options[ritm.Size].(map[string]interface{})["instance_class"]
-	defaults["kms_key_id"] = "${aws_kms_key." + ritm.Identifier + ".id}"
+	defaults["kms_key_id"] = "${aws_kms_key." + resourceID + ".id}"
 	defaults["allocated_storage"] = options[ritm.Size].(map[string]interface{})["allocated_storage"]
 	defaults["name"] = ritm.Name
 	defaults["username"] = ritm.Username
-	defaults["password"] = "${var." + ritm.Identifier + "_db_password}"
+	defaults["password"] = "${var." + resourceID + "_db_password}"
 	defaults["port"] = rand.Intn(maxPort-minPort) + minPort
 	defaults["backup_window"] = backupWindow(backupStartTime)
 	defaults["maintenance_window"] = maintenanceWindow(backupStartTime)
-	defaults["final_snapshot_identifier"] = ritm.Identifier + "-final-shapshot"
+	defaults["final_snapshot_identifier"] = resourceID + "-final-shapshot"
 	defaults["major_engine_version"] = options["major_engine_version"]
 	defaults["max_allocated_storage"] = 3 * defaults["allocated_storage"].(int)
 	mi, err := strconv.Atoi(ritm.MonitoringInterval)
@@ -147,7 +149,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 		fmt.Printf("WARNING: Error converting monitoring_interval to integer: %v\n", err)
 	}
 	defaults["monitoring_interval"] = mi
-	defaults["monitoring_role_name"] = ritm.Identifier + "-monitoring-role"
+	defaults["monitoring_role_name"] = resourceID + "-monitoring-role"
 	/* Enable once custom property/option groups are defined
 	if engine == "mysql" {
 		defaults["option_group_name"] = "grace.paas." + engine + "-" + options["major_engine_version"]
@@ -168,27 +170,27 @@ func generateTerraform(ritm *ritm, outFile string) error {
 		defaults["multi_az"] = true
 		defaults["subnet_ids"] = "${module.network.back_vpc_subnet_ids}"
 	}
-	defaults["vpc_security_group_ids"] = [...]string{"${aws_security_group." + ritm.Identifier + ".id}"}
+	defaults["vpc_security_group_ids"] = [...]string{"${aws_security_group." + resourceID + ".id}"}
 
 	tf.Map = map[string]interface{}{
 		"variable": [...]map[string]interface{}{{
-			ritm.Identifier + "_db_password": map[string]interface{}{
+			resourceID + "_db_password": map[string]interface{}{
 				"type":        "string",
 				"description": "(required) RDS user password",
 			},
-			ritm.Identifier + "_mgmt_cidr_blocks": map[string]interface{}{
+			resourceID + "_mgmt_cidr_blocks": map[string]interface{}{
 				"type":        "list(string)",
 				"description": "(optional) List of CIDR blocks from which to manage RDS",
 				"default":     [...]string{},
 			}},
 		},
 		"module": map[string]interface{}{
-			ritm.Identifier: defaults,
+			resourceID: defaults,
 		},
 		"resource": [...]map[string]interface{}{{
 			"aws_security_group": map[string]interface{}{
-				ritm.Identifier: map[string]interface{}{
-					"name":        ritm.Identifier + "-SG",
+				resourceID: map[string]interface{}{
+					"name":        resourceID + "-SG",
 					"description": "Allow RDS inboud traffic",
 					"vpc_id":      "${module.network.back_vpc_id}",
 					"ingress": [...]map[string]interface{}{
@@ -208,7 +210,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 							"from_port":        defaults["port"],
 							"to_port":          defaults["port"],
 							"protocol":         "TCP",
-							"cidr_blocks":      "${var." + ritm.Identifier + "_mgmt_cidr_blocks}",
+							"cidr_blocks":      "${var." + resourceID + "_mgmt_cidr_blocks}",
 							"ipv6_cidr_blocks": [...]string{},
 							"prefix_list_ids":  [...]string{},
 							"security_groups":  [...]string{},
@@ -218,15 +220,15 @@ func generateTerraform(ritm *ritm, outFile string) error {
 				},
 			},
 			"aws_kms_key": map[string]interface{}{
-				ritm.Identifier: map[string]interface{}{
-					"description":         ritm.Identifier + " RDS KMS Key",
+				resourceID: map[string]interface{}{
+					"description":         resourceID + " RDS KMS Key",
 					"enable_key_rotation": true,
 				},
 			},
 			"aws_kms_alias": map[string]interface{}{
-				ritm.Identifier: map[string]interface{}{
-					"name":          "alias/" + ritm.Identifier,
-					"target_key_id": "${aws_kms_key." + ritm.Identifier + ".key_id}",
+				resourceID: map[string]interface{}{
+					"name":          "alias/" + resourceID,
+					"target_key_id": "${aws_kms_key." + resourceID + ".key_id}",
 				},
 			},
 		},
