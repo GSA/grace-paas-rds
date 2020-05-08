@@ -141,7 +141,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	defaults["port"] = rand.Intn(maxPort-minPort) + minPort
 	defaults["backup_window"] = backupWindow(backupStartTime)
 	defaults["maintenance_window"] = maintenanceWindow(backupStartTime)
-	defaults["final_snapshot_identifier"] = resourceID + "-final-shapshot"
+	defaults["final_snapshot_identifier"] = ritm.Identifier + "-final-shapshot"
 	defaults["major_engine_version"] = options["major_engine_version"]
 	defaults["max_allocated_storage"] = 3 * defaults["allocated_storage"].(int)
 	mi, err := strconv.Atoi(ritm.MonitoringInterval)
@@ -149,7 +149,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 		fmt.Printf("WARNING: Error converting monitoring_interval to integer: %v\n", err)
 	}
 	defaults["monitoring_interval"] = mi
-	defaults["monitoring_role_name"] = resourceID + "-monitoring-role"
+	defaults["monitoring_role_name"] = ritm.Identifier + "-monitoring-role"
 	/* Enable once custom property/option groups are defined
 	if engine == "mysql" {
 		defaults["option_group_name"] = "grace.paas." + engine + "-" + options["major_engine_version"]
@@ -190,7 +190,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 		"resource": [...]map[string]interface{}{{
 			"aws_security_group": map[string]interface{}{
 				resourceID: map[string]interface{}{
-					"name":        resourceID + "-SG",
+					"name":        ritm.Identifier + "-SG",
 					"description": "Allow RDS inboud traffic",
 					"vpc_id":      "${module.network.back_vpc_id}",
 					"ingress": [...]map[string]interface{}{
@@ -221,7 +221,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 			},
 			"aws_kms_key": map[string]interface{}{
 				resourceID: map[string]interface{}{
-					"description":         resourceID + " RDS KMS Key",
+					"description":         ritm.Identifier + " RDS KMS Key",
 					"enable_key_rotation": true,
 				},
 			},
