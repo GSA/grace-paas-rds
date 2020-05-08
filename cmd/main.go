@@ -172,11 +172,11 @@ func generateTerraform(ritm *ritm, outFile string) error {
 
 	tf.Map = map[string]interface{}{
 		"variable": [...]map[string]interface{}{{
-			"db_password": map[string]interface{}{
+			ritm.Identifier + "_db_password": map[string]interface{}{
 				"type":        "string",
 				"description": "(required) RDS user password",
 			},
-			"rds_mgmt_cidr_blocks": map[string]interface{}{
+			ritm.Identifier + "_mgmt_cidr_blocks": map[string]interface{}{
 				"type":        "list(string)",
 				"description": "(optional) List of CIDR blocks from which to manage RDS",
 				"default":     [...]string{},
@@ -208,7 +208,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 							"from_port":        defaults["port"],
 							"to_port":          defaults["port"],
 							"protocol":         "TCP",
-							"cidr_blocks":      "${var.rds_mgmt_cidr_blocks}",
+							"cidr_blocks":      "${var." + ritm.Identifier + "_mgmt_cidr_blocks}",
 							"ipv6_cidr_blocks": [...]string{},
 							"prefix_list_ids":  [...]string{},
 							"security_groups":  [...]string{},
