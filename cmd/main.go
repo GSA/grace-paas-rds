@@ -133,7 +133,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	defaults["engine_version"] = options["engine_version"]
 	defaults["enabled_cloudwatch_logs_exports"] = options["enabled_cloudwatch_logs_exports"]
 	defaults["instance_class"] = options[ritm.Size].(map[string]interface{})["instance_class"]
-	defaults["kms_key_id"] = "${aws_kms_key." + resourceID + ".id}"
+	defaults["kms_key_id"] = "${aws_kms_key." + resourceID + ".arn}"
 	defaults["allocated_storage"] = options[ritm.Size].(map[string]interface{})["allocated_storage"]
 	defaults["name"] = ritm.Name
 	defaults["username"] = ritm.Username
