@@ -135,7 +135,7 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	defaults["allocated_storage"] = options[ritm.Size].(map[string]interface{})["allocated_storage"]
 	defaults["name"] = ritm.Name
 	defaults["username"] = ritm.Username
-	defaults["password"] = "${var.db_password}"
+	defaults["password"] = "${var." + ritm.Identifier + "_db_password}"
 	defaults["port"] = rand.Intn(maxPort-minPort) + minPort
 	defaults["backup_window"] = backupWindow(backupStartTime)
 	defaults["maintenance_window"] = maintenanceWindow(backupStartTime)
