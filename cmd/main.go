@@ -21,7 +21,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -38,24 +37,20 @@ const (
 
 // ritm type for the parsed ServiceNow RITM results JSON
 type ritm struct {
-	AccountSysID                       string `json:"account_sys_id"`                        // "99aa00000aa9aa00a9a99999a99aaa99",
-	Identifier                         string `json:"identifier"`                            // "test-rds",
-	Comments                           string `json:"comments"`                              // "",
-	CatalogItemName                    string `json:"cat_item_name"`                         // "GRACE-PaaS AWS RDS Provisioning Request",
-	MultiAZ                            string `json:"multi_az"`                              // false,
-	PerformanceInsightsEnabled         string `json:"performance_insights_enabled"`          // false,
-	RequestedFor                       string `json:"requested_for"`                         // "for@email.com",
-	PerformanceInsightsRetentionPeriod string `json:"performance_insights_retention_period"` // 7,
-	Number                             string `json:"number"`                                // "RITM0001001",
-	SysID                              string `json:"sys_id"`                                // "99aa00000aa9aa00a9a99999a99aaa99",
-	AccountID                          string `json:"account_id"`                            // "123456789012",
-	Size                               string `json:"size"`                                  // "small",
-	OpenedBy                           string `json:"opened_by"`                             // "by@email.com",
-	Engine                             string `json:"engine"`                                // "mysql8.0",
-	Name                               string `json:"name"`                                  // "TestDB",
-	MonitoringInterval                 string `json:"monitoring_interval"`                   // 5,
-	Supervisor                         string `json:"supervisor"`                            // "supervisor@email.com",
-	Username                           string `json:"username"`                              // "TestUser"
+	AccountSysID    string `json:"account_sys_id"` // "99aa00000aa9aa00a9a99999a99aaa99",
+	CatalogItemName string `json:"cat_item_name"`  // "GRACE-PaaS AWS RDS Provisioning Request",
+	Comments        string `json:"comments"`       // "",
+	Engine          string `json:"engine"`         // "mysql8.0",
+	Identifier      string `json:"identifier"`     // "test-rds",
+	MultiAZ         string `json:"multi_az"`       // false,
+	Name            string `json:"name"`           // "TestDB",
+	Number          string `json:"number"`         // "RITM0001001",
+	OpenedBy        string `json:"opened_by"`      // "by@email.com",
+	RequestedFor    string `json:"requested_for"`  // "for@email.com",
+	Size            string `json:"size"`           // "small",
+	Supervisor      string `json:"supervisor"`     // "supervisor@email.com",
+	SysID           string `json:"sys_id"`         // "99aa00000aa9aa00a9a99999a99aaa99",
+	Username        string `json:"username"`       // "TestUser"
 }
 
 type terraform struct {
@@ -144,11 +139,6 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	defaults["final_snapshot_identifier"] = ritm.Identifier + "-final-shapshot"
 	defaults["major_engine_version"] = options["major_engine_version"]
 	defaults["max_allocated_storage"] = 3 * defaults["allocated_storage"].(int)
-	mi, err := strconv.Atoi(ritm.MonitoringInterval)
-	if err != nil {
-		fmt.Printf("WARNING: Error converting monitoring_interval to integer: %v\n", err)
-	}
-	defaults["monitoring_interval"] = mi
 	defaults["monitoring_role_name"] = ritm.Identifier + "-monitoring-role"
 	/* Enable once custom property/option groups are defined
 	if engine == "mysql" {
@@ -159,13 +149,6 @@ func generateTerraform(ritm *ritm, outFile string) error {
 	}
 	defaults["use_parameter_group_name_prefix"] = false
 	*/
-	if ritm.PerformanceInsightsEnabled == yes {
-		defaults["performance_insights_enabled"] = true
-		defaults["performance_insights_retention_period"], err = strconv.Atoi(ritm.PerformanceInsightsRetentionPeriod)
-		if err != nil {
-			fmt.Printf("WARNING: Error converting to performance_insights_retention_period integer: %v\n", err)
-		}
-	}
 	if ritm.MultiAZ == yes {
 		defaults["multi_az"] = true
 		defaults["subnet_ids"] = "${module.network.back_vpc_subnet_ids}"
