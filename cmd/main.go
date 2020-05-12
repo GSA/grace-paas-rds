@@ -37,34 +37,69 @@ const (
 
 // ritm type for the parsed ServiceNow RITM results JSON
 type ritm struct {
-	AccountSysID    string `json:"account_sys_id"` // "99aa00000aa9aa00a9a99999a99aaa99",
-	CatalogItemName string `json:"cat_item_name"`  // "GRACE-PaaS AWS RDS Provisioning Request",
-	Comments        string `json:"comments"`       // "",
-	Engine          string `json:"engine"`         // "mysql8.0",
-	Identifier      string `json:"identifier"`     // "test-rds",
-	MultiAZ         string `json:"multi_az"`       // false,
-	Name            string `json:"name"`           // "TestDB",
-	Number          string `json:"number"`         // "RITM0001001",
-	OpenedBy        string `json:"opened_by"`      // "by@email.com",
-	RequestedFor    string `json:"requested_for"`  // "for@email.com",
-	Size            string `json:"size"`           // "small",
-	Supervisor      string `json:"supervisor"`     // "supervisor@email.com",
-	SysID           string `json:"sys_id"`         // "99aa00000aa9aa00a9a99999a99aaa99",
-	Username        string `json:"username"`       // "TestUser"
+	Account         string `json:"account"`       // "grace-paas-developent",
+	CatalogItemName string `json:"cat_item_name"` // "GRACE-PaaS AWS RDS Provisioning Request",
+	Comments        string `json:"comments"`      // "",
+	Engine          string `json:"engine"`        // "mysql8.0",
+	Identifier      string `json:"identifier"`    // "test-rds",
+	MultiAZ         string `json:"multi_az"`      // false,
+	Name            string `json:"name"`          // "TestDB",
+	Number          string `json:"number"`        // "RITM0001001",
+	OpenedBy        string `json:"opened_by"`     // "by@email.com",
+	RequestedFor    string `json:"requested_for"` // "for@email.com",
+	Size            string `json:"size"`          // "small",
+	Supervisor      string `json:"supervisor"`    // "supervisor@email.com",
+	SysID           string `json:"sys_id"`        // "99aa00000aa9aa00a9a99999a99aaa99",
+	Username        string `json:"username"`      // "TestUser"
 }
 
 type terraform struct {
 	Map map[string]interface{}
 }
 
-func handleRITM(inFile, outFile string) {
+func handleRITM(inFile, repoName string) {
 	ritm, err := parseRITM(inFile)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	err = generateTerraform(ritm, outFile)
+	tf := ritm.generateTerraform()
+
+	repo, err := cloneRepo(repoName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = newBranch(repo, ritm.Number)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	relPath := "terraform/rds_" + ritm.Number + ".tf.json"
+	fullPath := "/tmp/" + repoName + "/" + relPath
+
+	err = tf.writeFile(fullPath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = commit(repo, relPath, ritm.Number)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = pullRequest(ritm, repoName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = os.RemoveAll("/tmp/" + repoName + "/") // Remove the cloned repo after pushing
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -111,7 +146,7 @@ func maintenanceWindow(m int) string {
 }
 
 // nolint: funlen
-func generateTerraform(ritm *ritm, outFile string) error {
+func (ritm *ritm) generateTerraform() terraform {
 	var tf terraform
 	defaults := tf.rdsModuleDefaults()
 	engines := tf.rdsEngineDefaults()
@@ -218,6 +253,10 @@ func generateTerraform(ritm *ritm, outFile string) error {
 		},
 	}
 
+	return tf
+}
+
+func (tf *terraform) writeFile(outFile string) error {
 	b, err := json.MarshalIndent(tf.Map, "", "  ")
 	if err != nil {
 		return err
@@ -230,12 +269,17 @@ func generateTerraform(ritm *ritm, outFile string) error {
 
 func main() {
 	if len(os.Args) != 3 {
-		fmt.Printf("Usage: %s <inFile> <outFile>\n", filepath.Base(os.Args[0]))
+		fmt.Printf("Usage: %s <inFile> <repoName>\n", filepath.Base(os.Args[0]))
+		return
+	}
+
+	if os.Getenv("GITHUB_TOKEN") == "" {
+		fmt.Printf("GITHUB_TOKEN environment variable must be set.")
 		return
 	}
 
 	inFile := os.Args[1]
-	outFile := os.Args[2]
+	repoName := os.Args[2]
 
-	handleRITM(inFile, outFile)
+	handleRITM(inFile, repoName)
 }
