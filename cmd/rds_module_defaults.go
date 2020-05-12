@@ -1,7 +1,7 @@
 package main
 
 // rdsModuleDefaults sets the default RDS Module parameters
-func (t *terraform) rdsModuleDefaults() map[string]interface{} {
+func (tf *terraform) rdsModuleDefaults() map[string]interface{} {
 	m := map[string]interface{}{
 		"source":                                "terraform-aws-modules/rds/aws",
 		"version":                               "~> 2.0",

@@ -1,6 +1,6 @@
 package main
 
-func (t *terraform) rdsEngineDefaults() map[string]interface{} {
+func (tf *terraform) rdsEngineDefaults() map[string]interface{} {
 	m := map[string]interface{}{
 		"mysql5.7": map[string]interface{}{
 			"description":                     "MySQL Community Edition",
