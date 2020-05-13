@@ -22,6 +22,7 @@ func newAuthenticatedClient() *github.Client {
 }
 
 func pullRequest(r *ritm, repo string) error {
+	fmt.Println("Creating Pull request")
 	ctx := context.Background()
 	baseBranch := "master"
 	commitBranch := r.Number

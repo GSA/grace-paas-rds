@@ -1,0 +1,7 @@
+# Global owner is the GRACE development team
+* @GSA/grace-developers
+
+# Security groups are owned by Manoj for now, but possibly SecOps going forward
+# sg.go @GSA/secops
+sg.go @ManojChalise
+sg.tf @ManojChalise
