@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 )
 
 func cloneRepo(repo string) (*git.Repository, error) {
+	fmt.Printf("Cloning repository: %s", repo)
 	url := "https://github.com/GSA/" + repo
 	directory := "/tmp/" + repo
 	token := os.Getenv("GITHUB_TOKEN")
@@ -34,6 +36,7 @@ func cloneRepo(repo string) (*git.Repository, error) {
 }
 
 func newBranch(r *git.Repository, b string) error {
+	fmt.Printf("Adding branch: %s", b)
 	branch := plumbing.ReferenceName("refs/heads/" + b)
 
 	w, err := r.Worktree()
@@ -54,6 +57,7 @@ func newBranch(r *git.Repository, b string) error {
 }
 
 func commit(r *git.Repository, f, id string) error {
+	fmt.Println("Committing changes")
 	w, err := r.Worktree()
 	if err != nil {
 		return err
@@ -74,6 +78,7 @@ func commit(r *git.Repository, f, id string) error {
 		return err
 	}
 
+	fmt.Println("Pushing changes to GitHub")
 	err = r.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
 			Username: "access_token", // yes, this can be anything except an empty string
