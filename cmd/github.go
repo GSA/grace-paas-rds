@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/google/go-github/v28/github"
 	"golang.org/x/oauth2"
@@ -21,7 +22,7 @@ func newAuthenticatedClient() *github.Client {
 	return github.NewClient(tc)
 }
 
-func pullRequest(r *ritm, repo string) error {
+func pullRequest(r *ritm, repo string) (*github.PullRequest, error) {
 	fmt.Println("Creating Pull request")
 	ctx := context.Background()
 	baseBranch := "master"
@@ -38,7 +39,7 @@ func pullRequest(r *ritm, repo string) error {
 
 	pr, _, err := client.PullRequests.Create(ctx, owner, repo, newPR)
 	if err != nil {
-		return err
+		return pr, err
 	}
 
 	req := github.ReviewersRequest{
@@ -47,7 +48,32 @@ func pullRequest(r *ritm, repo string) error {
 
 	_, _, err = client.PullRequests.RequestReviewers(ctx, owner, repo, *pr.Number, req)
 	if err != nil {
-		return err
+		return pr, err
+	}
+
+	return pr, nil
+}
+
+func waitForMerge(pr *github.PullRequest) error {
+	client := newAuthenticatedClient()
+	ctx := context.Background()
+	owner := *pr.Base.Repo.Owner.Login
+	repo := *pr.Base.Repo.Name
+	var err error
+
+	fmt.Print("Waiting for Pull Request to be merged")
+	for *pr.State != "closed" {
+		fmt.Print(".")
+		time.Sleep(10 * time.Second)
+		pr, _, err = client.PullRequests.Get(ctx, owner, repo, *pr.Number)
+		if err != nil {
+			return err
+		}
+	}
+	fmt.Println()
+
+	if !*pr.Merged {
+		return fmt.Errorf("pull request %s but not merged", *pr.State)
 	}
 
 	return nil

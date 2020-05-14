@@ -94,13 +94,25 @@ func handleRITM(inFile, repoName string) {
 		return
 	}
 
-	err = pullRequest(ritm, repoName)
+	pr, err := pullRequest(ritm, repoName)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	err = os.RemoveAll("/tmp/" + repoName + "/") // Remove the cloned repo after pushing
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = waitForMerge(pr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = waitForApply(pr)
 	if err != nil {
 		fmt.Println(err)
 		return
