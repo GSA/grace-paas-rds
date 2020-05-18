@@ -17,7 +17,7 @@ func updateRITM(ritm *ritm, e error) error {
 	table := "sc_req_item"
 	var out map[string]interface{}
 	var state = 2 // Work in Progress
-	var comment = "RDS Provisioning complete via GRACE-PaaS CI/CD Pipeline"
+	var comment = "RDS Provisioned via GRACE-PaaS CI/CD Pipeline"
 	if e != nil {
 		state = 8 // Reopened
 		comment = fmt.Sprintf("Error provisioning RDS: %v", e)
