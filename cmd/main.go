@@ -52,6 +52,17 @@ type ritm struct {
 	Username        string `json:"username"`      // "TestUser"
 }
 
+func checkErr(ritm *ritm, err error) {
+	if err != nil {
+		fmt.Println(err)
+		err := updateRITM(ritm, err)
+		if err != nil {
+			fmt.Println(err)
+		}
+		os.Exit(1)
+	}
+}
+
 func handleRITM(inFile, repoName string) {
 	ritm, err := parseRITM(inFile)
 	if err != nil {
@@ -62,61 +73,37 @@ func handleRITM(inFile, repoName string) {
 	tf := ritm.generateTerraform()
 
 	repo, err := cloneRepo(repoName)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	err = newBranch(repo, ritm.Number)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	relPath := "terraform/rds_" + ritm.Number + ".tf.json"
 	fullPath := "/tmp/" + repoName + "/" + relPath
 
 	err = tf.writeFile(fullPath)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	_, err = addPassword(repoName, ritm)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	err = commit(repo, relPath, ritm.Number)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	pr, err := pullRequest(ritm, repoName)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	err = os.RemoveAll("/tmp/" + repoName + "/") // Remove the cloned repo after pushing
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	err = waitForMerge(pr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
 
 	err = waitForApply(pr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	checkErr(ritm, err)
+
+	err = updateRITM(ritm, nil)
+	checkErr(ritm, err)
 
 	fmt.Println("Processing complete")
 }
@@ -174,6 +161,21 @@ func main() {
 
 	if os.Getenv("CIRCLE_TOKEN") == "" {
 		fmt.Printf("CIRCLE_TOKEN environment variable must be set.")
+		return
+	}
+
+	if os.Getenv("SN_INSTANCE") == "" {
+		fmt.Printf("SN_INSTANCE environment variable must be set.")
+		return
+	}
+
+	if os.Getenv("SN_PASSWORD") == "" {
+		fmt.Printf("SN_PASSWORD environment variable must be set.")
+		return
+	}
+
+	if os.Getenv("SN_USER") == "" {
+		fmt.Printf("SN_USER environment variable must be set.")
 		return
 	}
 

@@ -3,6 +3,7 @@ module github.com/GSA/grace-paas-rds/cmd
 go 1.14
 
 require (
+	github.com/andrewstuart/servicenow v0.0.0-20171220221443-86b30969a69e
 	github.com/go-git/go-git/v5 v5.0.0
 	github.com/google/go-github/v28 v28.1.1
 	github.com/jszwedko/go-circleci v0.3.0
