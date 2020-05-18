@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -148,35 +149,38 @@ func maintenanceWindow(m int) string {
 	return fmt.Sprintf("%s:%02d:%02d-%s:%02d:%02d", maintenanceDay, m/60, m%60, maintenanceDay, e/60, e%60)
 }
 
-func main() {
+func check() error {
 	if len(os.Args) != 3 {
-		fmt.Printf("Usage: %s <inFile> <repoName>\n", filepath.Base(os.Args[0]))
-		return
+		return fmt.Errorf("usage: %s <inFile> <repoName>", filepath.Base(os.Args[0]))
 	}
 
 	if os.Getenv("GITHUB_TOKEN") == "" {
-		fmt.Printf("GITHUB_TOKEN environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable GITHUB_TOKEN must be set")
 	}
 
 	if os.Getenv("CIRCLE_TOKEN") == "" {
-		fmt.Printf("CIRCLE_TOKEN environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable CIRCLE_TOKEN must be set")
 	}
 
 	if os.Getenv("SN_INSTANCE") == "" {
-		fmt.Printf("SN_INSTANCE environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable SN_INSTANCE must be set")
 	}
 
 	if os.Getenv("SN_PASSWORD") == "" {
-		fmt.Printf("SN_PASSWORD environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable SN_PASSWORD must be set")
 	}
 
 	if os.Getenv("SN_USER") == "" {
-		fmt.Printf("SN_USER environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable SN_USER must be set")
+	}
+
+	return nil
+}
+
+func main() {
+	err := check()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	inFile := os.Args[1]
