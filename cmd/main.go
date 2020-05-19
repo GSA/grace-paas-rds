@@ -44,6 +44,7 @@ type req struct {
 	email        string
 	fullPath     string
 	githubClient *github.Client
+	githubURL    string
 	inFile       string
 	ritm         *ritm
 	relPath      string
@@ -82,6 +83,7 @@ func newReq() (*req, error) {
 	r.inFile = os.Args[1]
 	r.repoName = os.Args[2]
 	r.email = "grace-staff@gsa.gov"
+	r.githubURL = "https://github.com/GSA/"
 	r.circleClient = newCircleClient(os.Getenv("CIRCLE_TOKEN"))
 	r.githubClient = newAuthenticatedClient()
 	r.snowClient = newSnowClient()
@@ -95,8 +97,7 @@ func newReq() (*req, error) {
 	r.tempDir = os.TempDir() + string(os.PathSeparator) + r.repoName + string(os.PathSeparator)
 	r.fullPath = r.tempDir + r.relPath
 
-	r.repo, err = cloneRepo(r.repoName)
-	return &r, err
+	return &r, nil
 }
 
 func (r *req) checkErr(err error) {
@@ -112,38 +113,45 @@ func (r *req) checkErr(err error) {
 	}
 }
 
-func handleRITM() {
-	req, err := newReq()
-	req.checkErr(err)
+func handleRITM(opt ...*req) {
+	var r *req
+	if len(opt) > 0 {
+		r = opt[0]
+	} else {
+		r, err := newReq()
+		r.checkErr(err)
+	}
 
-	tf := req.ritm.generateTerraform()
+	defer os.RemoveAll(r.tempDir) // Remove the cloned repo after pushing
+	repo, err := r.cloneRepo()
+	r.checkErr(err)
 
-	err = req.newBranch()
-	req.checkErr(err)
+	r.repo = repo
+	tf := r.ritm.generateTerraform()
 
-	err = tf.writeFile(req.fullPath)
-	req.checkErr(err)
+	err = r.newBranch()
+	r.checkErr(err)
 
-	_, err = req.addPassword()
-	req.checkErr(err)
+	err = tf.writeFile(r.fullPath)
+	r.checkErr(err)
 
-	err = req.commit()
-	req.checkErr(err)
+	_, err = r.addPassword()
+	r.checkErr(err)
 
-	pr, err := req.pullRequest()
-	req.checkErr(err)
+	err = r.commit()
+	r.checkErr(err)
 
-	err = os.RemoveAll(req.tempDir) // Remove the cloned repo after pushing
-	req.checkErr(err)
+	pr, err := r.pullRequest()
+	r.checkErr(err)
 
 	err = waitForMerge(pr)
-	req.checkErr(err)
+	r.checkErr(err)
 
 	err = waitForApply(pr)
-	req.checkErr(err)
+	r.checkErr(err)
 
-	err = req.updateRITM(nil)
-	req.checkErr(err)
+	err = r.updateRITM(nil)
+	r.checkErr(err)
 
 	fmt.Println("Processing complete")
 }
@@ -189,7 +197,6 @@ func maintenanceWindow(m int) string {
 }
 
 func check() error {
-	fmt.Println("In init()")
 	if len(os.Args) != 3 {
 		return fmt.Errorf("usage: %s <inFile> <repoName>", filepath.Base(os.Args[0]))
 	}

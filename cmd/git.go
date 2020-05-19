@@ -11,13 +11,13 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func cloneRepo(repo string) (*git.Repository, error) {
-	fmt.Printf("Cloning repository: %s", repo)
-	url := "https://github.com/GSA/" + repo
-	directory := "/tmp/" + repo
+func (r *req) cloneRepo() (*git.Repository, error) {
+	fmt.Printf("Cloning repository: %s\n", r.repoName)
+	url := r.githubURL + r.repoName
+	directory := r.tempDir
 	token := os.Getenv("GITHUB_TOKEN")
 
-	r, err := git.PlainClone(directory, false, &git.CloneOptions{
+	resp, err := git.PlainClone(directory, false, &git.CloneOptions{
 		// The intended use of a GitHub personal access token is in replace of your password
 		// because access tokens can easily be revoked.
 		// https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/
@@ -29,10 +29,10 @@ func cloneRepo(repo string) (*git.Repository, error) {
 		Progress: os.Stdout,
 	})
 	if err != nil {
-		return r, err
+		return resp, err
 	}
 
-	return r, nil
+	return resp, nil
 }
 
 func (r *req) newBranch() error {
