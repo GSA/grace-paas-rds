@@ -12,16 +12,20 @@ func resetEnv(oldArgs []string, oldEnv map[string]string) {
 	}
 }
 
-func TestCheck(t *testing.T) {
-	oldArgs := os.Args
-	oldEnv := map[string]string{
+func captureEnv() (oldArgs []string, oldEnv map[string]string) {
+	oldArgs = os.Args
+	oldEnv = map[string]string{
 		"CIRCLE_TOKEN": os.Getenv("CIRCLE_TOKEN"),
 		"GITHUB_TOKEN": os.Getenv("GITHUB_TOKEN"),
 		"SN_INSTANCE":  os.Getenv("SN_INSTANCE"),
 		"SN_PASSWORD":  os.Getenv("SN_PASSWORD"),
 		"SN_USER":      os.Getenv("SN_USER"),
 	}
+	return oldArgs, oldEnv
+}
 
+func TestInit(t *testing.T) {
+	oldArgs, oldEnv := captureEnv()
 	tt := map[string]struct {
 		args []string
 		env  map[string]string
@@ -101,13 +105,6 @@ func TestCheck(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			resetEnv(tc.args, tc.env)
-
-			err := check()
-			if tc.err == "" && err != nil {
-				t.Errorf("check() failed: unexpected error: %v", err)
-			} else if tc.err != "" && tc.err != err.Error() {
-				t.Errorf("check() failed: expected error: %s\nGot: %v\n", tc.err, err)
-			}
 		})
 	}
 

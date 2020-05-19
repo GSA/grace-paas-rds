@@ -17,8 +17,9 @@ func TestUpdateRITM(t *testing.T) {
 		t.Skip("skipping test, SN_USER not set")
 	}
 
-	ritm := &ritm{SysID: "9744dd541bb450505fdaa82fe54bcb2b"}
-	err := updateRITM(ritm, fmt.Errorf("%s", "testing"))
+	var r *req
+	r.ritm = &ritm{SysID: "9744dd541bb450505fdaa82fe54bcb2b"}
+	err := r.updateRITM(fmt.Errorf("%s", "testing"))
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

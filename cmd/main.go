@@ -17,11 +17,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
+
+	"github.com/andrewstuart/servicenow"
+	git "github.com/go-git/go-git/v5"
+	"github.com/google/go-github/v28/github"
+	"github.com/jszwedko/go-circleci"
 )
 
 const (
@@ -33,6 +37,21 @@ const (
 	maintenanceDay   = "Thu" // Thursday...assuming we aren't crossing a day boundary
 	yes              = "Yes" // ServiceNow uses "Yes"/"No" instead of booleans
 )
+
+// req is a provisioning request object
+type req struct {
+	circleClient *circleci.Client
+	email        string
+	fullPath     string
+	githubClient *github.Client
+	inFile       string
+	ritm         *ritm
+	relPath      string
+	repo         *git.Repository
+	repoName     string
+	snowClient   *servicenow.Client
+	tempDir      string
+}
 
 // ritm type for the parsed ServiceNow RITM results JSON
 type ritm struct {
@@ -53,58 +72,78 @@ type ritm struct {
 	Username        string `json:"username"`      // "TestUser"
 }
 
-func checkErr(ritm *ritm, err error) {
+func newReq() (*req, error) {
+	var r req
+	err := check()
+	if err != nil {
+		return &r, err
+	}
+
+	r.inFile = os.Args[1]
+	r.repoName = os.Args[2]
+	r.email = "grace-staff@gsa.gov"
+	r.circleClient = newCircleClient(os.Getenv("CIRCLE_TOKEN"))
+	r.githubClient = newAuthenticatedClient()
+	r.snowClient = newSnowClient()
+
+	r.ritm, err = parseRITM(r.inFile)
+	if err != nil {
+		return &r, err
+	}
+
+	r.relPath = "terraform" + string(os.PathSeparator) + "rds_" + r.ritm.Number + ".tf.json"
+	r.tempDir = os.TempDir() + string(os.PathSeparator) + r.repoName + string(os.PathSeparator)
+	r.fullPath = r.tempDir + r.relPath
+
+	r.repo, err = cloneRepo(r.repoName)
+	return &r, err
+}
+
+func (r *req) checkErr(err error) {
 	if err != nil {
 		fmt.Println(err)
-		err := updateRITM(ritm, err)
-		if err != nil {
-			fmt.Println(err)
+		if r.ritm != nil {
+			err := r.updateRITM(err)
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 		os.Exit(1)
 	}
 }
 
-func handleRITM(inFile, repoName string) {
-	ritm, err := parseRITM(inFile)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+func handleRITM() {
+	req, err := newReq()
+	req.checkErr(err)
 
-	tf := ritm.generateTerraform()
+	tf := req.ritm.generateTerraform()
 
-	repo, err := cloneRepo(repoName)
-	checkErr(ritm, err)
+	err = req.newBranch()
+	req.checkErr(err)
 
-	err = newBranch(repo, ritm.Number)
-	checkErr(ritm, err)
+	err = tf.writeFile(req.fullPath)
+	req.checkErr(err)
 
-	relPath := "terraform/rds_" + ritm.Number + ".tf.json"
-	fullPath := "/tmp/" + repoName + "/" + relPath
+	_, err = req.addPassword()
+	req.checkErr(err)
 
-	err = tf.writeFile(fullPath)
-	checkErr(ritm, err)
+	err = req.commit()
+	req.checkErr(err)
 
-	_, err = addPassword(repoName, ritm)
-	checkErr(ritm, err)
+	pr, err := req.pullRequest()
+	req.checkErr(err)
 
-	err = commit(repo, relPath, ritm.Number)
-	checkErr(ritm, err)
-
-	pr, err := pullRequest(ritm, repoName)
-	checkErr(ritm, err)
-
-	err = os.RemoveAll("/tmp/" + repoName + "/") // Remove the cloned repo after pushing
-	checkErr(ritm, err)
+	err = os.RemoveAll(req.tempDir) // Remove the cloned repo after pushing
+	req.checkErr(err)
 
 	err = waitForMerge(pr)
-	checkErr(ritm, err)
+	req.checkErr(err)
 
 	err = waitForApply(pr)
-	checkErr(ritm, err)
+	req.checkErr(err)
 
-	err = updateRITM(ritm, nil)
-	checkErr(ritm, err)
+	err = req.updateRITM(nil)
+	req.checkErr(err)
 
 	fmt.Println("Processing complete")
 }
@@ -150,6 +189,7 @@ func maintenanceWindow(m int) string {
 }
 
 func check() error {
+	fmt.Println("In init()")
 	if len(os.Args) != 3 {
 		return fmt.Errorf("usage: %s <inFile> <repoName>", filepath.Base(os.Args[0]))
 	}
@@ -173,18 +213,9 @@ func check() error {
 	if os.Getenv("SN_USER") == "" {
 		return fmt.Errorf("environment variable SN_USER must be set")
 	}
-
 	return nil
 }
 
 func main() {
-	err := check()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	inFile := os.Args[1]
-	repoName := os.Args[2]
-
-	handleRITM(inFile, repoName)
+	handleRITM()
 }

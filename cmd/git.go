@@ -35,11 +35,11 @@ func cloneRepo(repo string) (*git.Repository, error) {
 	return r, nil
 }
 
-func newBranch(r *git.Repository, b string) error {
-	fmt.Printf("Adding branch: %s", b)
-	branch := plumbing.ReferenceName("refs/heads/" + b)
+func (r *req) newBranch() error {
+	fmt.Printf("Adding branch: %s", r.repoName)
+	branch := plumbing.ReferenceName("refs/heads/" + r.repoName)
 
-	w, err := r.Worktree()
+	w, err := r.repo.Worktree()
 	if err != nil {
 		return err
 	}
@@ -56,21 +56,21 @@ func newBranch(r *git.Repository, b string) error {
 	return nil
 }
 
-func commit(r *git.Repository, f, id string) error {
+func (r *req) commit() error {
 	fmt.Println("Committing changes")
-	w, err := r.Worktree()
+	w, err := r.repo.Worktree()
 	if err != nil {
 		return err
 	}
 
-	_, err = w.Add(f)
+	_, err = w.Add(r.relPath)
 	if err != nil {
 		return err
 	}
-	_, err = w.Commit(id, &git.CommitOptions{
+	_, err = w.Commit(r.ritm.Number, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  id,
-			Email: "grace-staff@gsa.gov",
+			Name:  r.ritm.Number,
+			Email: r.email,
 			When:  time.Now(),
 		},
 	})
@@ -79,7 +79,7 @@ func commit(r *git.Repository, f, id string) error {
 	}
 
 	fmt.Println("Pushing changes to GitHub")
-	err = r.Push(&git.PushOptions{
+	err = r.repo.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
 			Username: "access_token", // yes, this can be anything except an empty string
 			Password: os.Getenv("GITHUB_TOKEN"),
