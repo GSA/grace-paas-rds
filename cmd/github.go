@@ -41,11 +41,11 @@ func (r *req) pullRequest() (*github.PullRequest, error) {
 		return pr, err
 	}
 
-	req := github.ReviewersRequest{
+	revReq := github.ReviewersRequest{
 		TeamReviewers: []string{"grace-developers"},
 	}
 
-	_, _, err = r.githubClient.PullRequests.RequestReviewers(ctx, owner, r.repoName, *pr.Number, req)
+	_, _, err = r.githubClient.PullRequests.RequestReviewers(ctx, owner, r.repoName, *pr.Number, revReq)
 	if err != nil {
 		return pr, err
 	}

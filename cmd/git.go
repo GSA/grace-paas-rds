@@ -12,7 +12,7 @@ import (
 )
 
 func (r *req) cloneRepo() (*git.Repository, error) {
-	fmt.Printf("Cloning repository: %s\n", r.repoName)
+	fmt.Printf("Cloning repository: %s to: %s\n", r.repoName, r.tempDir)
 	url := r.githubURL + r.repoName
 	directory := r.tempDir
 	token := os.Getenv("GITHUB_TOKEN")
@@ -36,8 +36,8 @@ func (r *req) cloneRepo() (*git.Repository, error) {
 }
 
 func (r *req) newBranch() error {
-	fmt.Printf("Adding branch: %s", r.repoName)
-	branch := plumbing.ReferenceName("refs/heads/" + r.repoName)
+	fmt.Printf("Adding branch: %s\n", r.ritm.Number)
+	branch := plumbing.ReferenceName("refs/heads/" + r.ritm.Number)
 
 	w, err := r.repo.Worktree()
 	if err != nil {

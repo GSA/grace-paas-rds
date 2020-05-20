@@ -221,36 +221,3 @@ func TestMaintenanceWindow(t *testing.T) {
 		t.Errorf("maintenanceWindow() failed: expecting: %q got: %q", expected, w)
 	}
 }
-
-func TestHandleRITM(t *testing.T) {
-	t.Skip("not working")
-	oldArgs, oldEnv := captureEnv()
-	tt := map[string]struct {
-		args []string
-		env  map[string]string
-		err  string
-		req  *req
-	}{
-		"happy": {
-			args: []string{"cmd", "testdata/test.json", "test"},
-			env: map[string]string{
-				"CIRCLE_TOKEN": "test",
-				"GITHUB_TOKEN": "test",
-				"SN_INSTANCE":  "test",
-				"SN_PASSWORD":  "test",
-				"SN_USER":      "test",
-			},
-		},
-	}
-	for name, tc := range tt {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			resetEnv(tc.args, tc.env)
-			setup()
-			defer teardown()
-			handleRITM(mockReq)
-		})
-	}
-
-	resetEnv(oldArgs, oldEnv)
-}

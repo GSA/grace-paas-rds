@@ -115,14 +115,14 @@ func (r *req) checkErr(err error) {
 
 func handleRITM(opt ...*req) {
 	var r *req
+	var err error
 	if len(opt) > 0 {
 		r = opt[0]
 	} else {
-		r, err := newReq()
+		r, err = newReq()
 		r.checkErr(err)
 	}
 
-	defer os.RemoveAll(r.tempDir) // Remove the cloned repo after pushing
 	repo, err := r.cloneRepo()
 	r.checkErr(err)
 
@@ -139,6 +139,9 @@ func handleRITM(opt ...*req) {
 	r.checkErr(err)
 
 	err = r.commit()
+	r.checkErr(err)
+
+	err = os.RemoveAll(r.tempDir) // Remove the cloned repo after pushing
 	r.checkErr(err)
 
 	pr, err := r.pullRequest()

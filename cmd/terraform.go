@@ -25,12 +25,13 @@ func (ritm *ritm) generateTerraform() terraform {
 			resourceID + "_db_password": map[string]interface{}{
 				"type":        "string",
 				"description": "(required) RDS user password",
-			},
-			resourceID + "_mgmt_cidr_blocks": map[string]interface{}{
-				"type":        "list(string)",
-				"description": "(optional) List of CIDR blocks from which to manage RDS",
-				"default":     [...]string{},
 			}},
+			{
+				resourceID + "_mgmt_cidr_blocks": map[string]interface{}{
+					"type":        "list(string)",
+					"description": "(optional) List of CIDR blocks from which to manage RDS",
+					"default":     [...]string{},
+				}},
 		},
 		"module": map[string]interface{}{
 			resourceID: module,
