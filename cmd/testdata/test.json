@@ -1,0 +1,15 @@
+{
+  "identifier": "test-rds",
+  "multi_az": "Yes",
+  "requested_for": "user - user@mail.com",
+  "number": "RITM0010001",
+  "sys_id": "7d513c6b1f6d4ce99e199d9b60e74532",
+  "cat_item_name": "GRACE-PaaS AWS RDS Provisioning Request",
+  "size": "small",
+  "opened_by": "user - user@mail.com",
+  "engine": "mysql8.0",
+  "name": "test_db",
+  "supervisor": "supervisor - supervisor@mail.com",
+  "account": "grace-paas-development",
+  "username": "test-dbuser"
+}

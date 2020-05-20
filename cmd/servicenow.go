@@ -7,13 +7,16 @@ import (
 	"github.com/andrewstuart/servicenow"
 )
 
-func updateRITM(ritm *ritm, e error) error {
-	fmt.Printf("Updating %s (%s)\n", ritm.Number, ritm.SysID)
-	client := servicenow.Client{
+func newSnowClient() *servicenow.Client {
+	return &servicenow.Client{
 		Username: os.Getenv("SN_USER"),
 		Password: os.Getenv("SN_PASSWORD"),
 		Instance: os.Getenv("SN_INSTANCE"),
 	}
+}
+
+func (r *req) updateRITM(e error) error {
+	fmt.Printf("Updating %s (%s)\n", r.ritm.Number, r.ritm.SysID)
 	table := "sc_req_item"
 	var out map[string]interface{}
 	var state = 2 // Work in Progress
@@ -27,5 +30,5 @@ func updateRITM(ritm *ritm, e error) error {
 		"comments": comment,
 	}
 
-	return client.PerformFor(table, "update", ritm.SysID, nil, body, &out)
+	return r.snowClient.PerformFor(table, "update", r.ritm.SysID, nil, body, &out)
 }

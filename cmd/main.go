@@ -21,6 +21,11 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+
+	"github.com/andrewstuart/servicenow"
+	git "github.com/go-git/go-git/v5"
+	"github.com/google/go-github/v28/github"
+	"github.com/jszwedko/go-circleci"
 )
 
 const (
@@ -32,6 +37,22 @@ const (
 	maintenanceDay   = "Thu" // Thursday...assuming we aren't crossing a day boundary
 	yes              = "Yes" // ServiceNow uses "Yes"/"No" instead of booleans
 )
+
+// req is a provisioning request object
+type req struct {
+	circleClient *circleci.Client
+	email        string
+	fullPath     string
+	githubClient *github.Client
+	githubURL    string
+	inFile       string
+	ritm         *ritm
+	relPath      string
+	repo         *git.Repository
+	repoName     string
+	snowClient   *servicenow.Client
+	tempDir      string
+}
 
 // ritm type for the parsed ServiceNow RITM results JSON
 type ritm struct {
@@ -52,58 +73,88 @@ type ritm struct {
 	Username        string `json:"username"`      // "TestUser"
 }
 
-func checkErr(ritm *ritm, err error) {
+func newReq() (*req, error) {
+	var r req
+	err := check()
+	if err != nil {
+		return &r, err
+	}
+
+	r.inFile = os.Args[1]
+	r.repoName = os.Args[2]
+	r.email = "grace-staff@gsa.gov"
+	r.githubURL = "https://github.com/GSA/"
+	r.circleClient = newCircleClient(os.Getenv("CIRCLE_TOKEN"))
+	r.githubClient = newAuthenticatedClient()
+	r.snowClient = newSnowClient()
+
+	r.ritm, err = parseRITM(r.inFile)
+	if err != nil {
+		return &r, err
+	}
+
+	r.relPath = filepath.Join("terraform", "rds_"+r.ritm.Number+".tf.json")
+	r.tempDir = filepath.Join(os.TempDir(), r.repoName)
+	r.fullPath = filepath.Join(r.tempDir, r.relPath)
+
+	return &r, nil
+}
+
+func (r *req) checkErr(err error) {
 	if err != nil {
 		fmt.Println(err)
-		err := updateRITM(ritm, err)
-		if err != nil {
-			fmt.Println(err)
+		if r.ritm != nil {
+			err := r.updateRITM(err)
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 		os.Exit(1)
 	}
 }
 
-func handleRITM(inFile, repoName string) {
-	ritm, err := parseRITM(inFile)
-	if err != nil {
-		fmt.Println(err)
-		return
+func handleRITM(opt ...*req) {
+	var r *req
+	var err error
+	if len(opt) > 0 {
+		r = opt[0]
+	} else {
+		r, err = newReq()
+		r.checkErr(err)
 	}
 
-	tf := ritm.generateTerraform()
+	repo, err := r.cloneRepo()
+	r.checkErr(err)
 
-	repo, err := cloneRepo(repoName)
-	checkErr(ritm, err)
+	r.repo = repo
+	tf := r.ritm.generateTerraform()
 
-	err = newBranch(repo, ritm.Number)
-	checkErr(ritm, err)
+	err = r.newBranch()
+	r.checkErr(err)
 
-	relPath := "terraform/rds_" + ritm.Number + ".tf.json"
-	fullPath := "/tmp/" + repoName + "/" + relPath
+	err = tf.writeFile(r.fullPath)
+	r.checkErr(err)
 
-	err = tf.writeFile(fullPath)
-	checkErr(ritm, err)
+	_, err = r.addPassword()
+	r.checkErr(err)
 
-	_, err = addPassword(repoName, ritm)
-	checkErr(ritm, err)
+	err = r.commit()
+	r.checkErr(err)
 
-	err = commit(repo, relPath, ritm.Number)
-	checkErr(ritm, err)
+	err = os.RemoveAll(r.tempDir) // Remove the cloned repo after pushing
+	r.checkErr(err)
 
-	pr, err := pullRequest(ritm, repoName)
-	checkErr(ritm, err)
-
-	err = os.RemoveAll("/tmp/" + repoName + "/") // Remove the cloned repo after pushing
-	checkErr(ritm, err)
+	pr, err := r.pullRequest()
+	r.checkErr(err)
 
 	err = waitForMerge(pr)
-	checkErr(ritm, err)
+	r.checkErr(err)
 
 	err = waitForApply(pr)
-	checkErr(ritm, err)
+	r.checkErr(err)
 
-	err = updateRITM(ritm, nil)
-	checkErr(ritm, err)
+	err = r.updateRITM(nil)
+	r.checkErr(err)
 
 	fmt.Println("Processing complete")
 }
@@ -148,39 +199,33 @@ func maintenanceWindow(m int) string {
 	return fmt.Sprintf("%s:%02d:%02d-%s:%02d:%02d", maintenanceDay, m/60, m%60, maintenanceDay, e/60, e%60)
 }
 
-func main() {
+func check() error {
 	if len(os.Args) != 3 {
-		fmt.Printf("Usage: %s <inFile> <repoName>\n", filepath.Base(os.Args[0]))
-		return
+		return fmt.Errorf("usage: %s <inFile> <repoName>", filepath.Base(os.Args[0]))
 	}
 
 	if os.Getenv("GITHUB_TOKEN") == "" {
-		fmt.Printf("GITHUB_TOKEN environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable GITHUB_TOKEN must be set")
 	}
 
 	if os.Getenv("CIRCLE_TOKEN") == "" {
-		fmt.Printf("CIRCLE_TOKEN environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable CIRCLE_TOKEN must be set")
 	}
 
 	if os.Getenv("SN_INSTANCE") == "" {
-		fmt.Printf("SN_INSTANCE environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable SN_INSTANCE must be set")
 	}
 
 	if os.Getenv("SN_PASSWORD") == "" {
-		fmt.Printf("SN_PASSWORD environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable SN_PASSWORD must be set")
 	}
 
 	if os.Getenv("SN_USER") == "" {
-		fmt.Printf("SN_USER environment variable must be set.")
-		return
+		return fmt.Errorf("environment variable SN_USER must be set")
 	}
+	return nil
+}
 
-	inFile := os.Args[1]
-	repoName := os.Args[2]
-
-	handleRITM(inFile, repoName)
+func main() {
+	handleRITM()
 }
