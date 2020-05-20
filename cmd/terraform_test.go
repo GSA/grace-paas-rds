@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -33,7 +34,7 @@ func TestWriteFile(t *testing.T) {
 	}
 
 	tf := ritm.generateTerraform()
-	fileName := os.TempDir() + "tf.json"
+	fileName := filepath.Join(os.TempDir(), "tf.json")
 
 	err = tf.writeFile(fileName)
 	if err != nil {

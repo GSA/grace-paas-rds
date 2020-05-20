@@ -93,9 +93,9 @@ func newReq() (*req, error) {
 		return &r, err
 	}
 
-	r.relPath = "terraform" + string(os.PathSeparator) + "rds_" + r.ritm.Number + ".tf.json"
-	r.tempDir = os.TempDir() + string(os.PathSeparator) + r.repoName + string(os.PathSeparator)
-	r.fullPath = r.tempDir + r.relPath
+	r.relPath = filepath.Join("terraform", "rds_"+r.ritm.Number+".tf.json")
+	r.tempDir = filepath.Join(os.TempDir(), r.repoName)
+	r.fullPath = filepath.Join(r.tempDir, r.relPath)
 
 	return &r, nil
 }

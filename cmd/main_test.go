@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -36,7 +37,7 @@ func TestNewReq(t *testing.T) {
 		req  *req
 	}{
 		"happy": {
-			args: []string{"cmd", "testdata/test.json", "test"},
+			args: []string{"cmd", filepath.Join("testdata", "test.json"), "test"},
 			env: map[string]string{
 				"CIRCLE_TOKEN": "test",
 				"GITHUB_TOKEN": "test",
