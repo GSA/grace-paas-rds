@@ -1,0 +1,114 @@
+{
+  "module": {
+    "test": {
+      "allocated_storage": 20,
+      "backup_retention_period": 31,
+      "backup_window": "03:35-04:05",
+      "create_db_option_group": false,
+      "create_db_parameter_group": false,
+      "create_monitoring_role": true,
+      "deletion_protection": true,
+      "enabled_cloudwatch_logs_exports": [
+        "postgresql",
+        "upgrade"
+      ],
+      "engine": "postgres",
+      "engine_version": "12.2",
+      "final_snapshot_identifier": "test-final-shapshot",
+      "identifier": "test",
+      "instance_class": "db.m5.large",
+      "kms_key_id": "${aws_kms_key.test.arn}",
+      "maintenance_window": "Thu:04:06-Thu:04:36",
+      "major_engine_version": "12",
+      "max_allocated_storage": 60,
+      "monitoring_interval": 5,
+      "monitoring_role_name": "test-monitoring-role",
+      "name": "test",
+      "password": "${var.test_db_password}",
+      "performance_insights_enabled": true,
+      "performance_insights_retention_period": 7,
+      "port": 41044,
+      "publicly_accessible": false,
+      "source": "terraform-aws-modules/rds/aws",
+      "storage_encrypted": true,
+      "username": "test",
+      "version": "~\u003e 2.0",
+      "vpc_security_group_ids": [
+        "${aws_security_group.test.id}"
+      ]
+    }
+  },
+  "resource": [
+    {
+      "aws_kms_alias": {
+        "test": {
+          "name": "alias/test",
+          "target_key_id": "${aws_kms_key.test.key_id}"
+        }
+      },
+      "aws_kms_key": {
+        "test": {
+          "description": "test RDS KMS Key",
+          "enable_key_rotation": true
+        }
+      },
+      "aws_security_group": {
+        "test": {
+          "description": "Allow RDS inboud traffic",
+          "ingress": [
+            {
+              "cidr_blocks": [
+                "${module.network.mid_vpc_cidr}"
+              ],
+              "description": "Mid VPC",
+              "from_port": 41044,
+              "ipv6_cidr_blocks": [],
+              "prefix_list_ids": [],
+              "protocol": "TCP",
+              "security_groups": [],
+              "self": false,
+              "to_port": 41044
+            },
+            {
+              "cidr_blocks": "${var.test_mgmt_cidr_blocks}",
+              "description": "DBMW Mgmt",
+              "from_port": 41044,
+              "ipv6_cidr_blocks": [],
+              "prefix_list_ids": [],
+              "protocol": "TCP",
+              "security_groups": [],
+              "self": false,
+              "to_port": 41044
+            }
+          ],
+          "name": "test-SG",
+          "vpc_id": "${module.network.back_vpc_id}"
+        }
+      },
+      "aws_ssm_parameter": {
+        "test_password": {
+          "description": "test RDS Master Password",
+          "key_id": "${aws_kms_key.test.arn}",
+          "name": "/database/password/test",
+          "type": "SecureString",
+          "value": "${var.test_db_password}"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "test_db_password": {
+        "description": "(required) RDS user password",
+        "type": "string"
+      }
+    },
+    {
+      "test_mgmt_cidr_blocks": {
+        "default": [],
+        "description": "(optional) List of CIDR blocks from which to manage RDS",
+        "type": "list(string)"
+      }
+    }
+  ]
+}

@@ -28,6 +28,7 @@ func captureEnv() (oldArgs []string, oldEnv map[string]string) {
 	return oldArgs, oldEnv
 }
 
+// nolint: funlen
 func TestNewReq(t *testing.T) {
 	oldArgs, oldEnv := captureEnv()
 	tt := map[string]struct {
@@ -37,7 +38,7 @@ func TestNewReq(t *testing.T) {
 		req  *req
 	}{
 		"happy": {
-			args: []string{"cmd", filepath.Join("testdata", "test.json"), "test"},
+			args: []string{"cmd1", "-request", filepath.Join("testdata", "test.json"), "-format", "terraform", "-repo", "test"},
 			env: map[string]string{
 				"CIRCLE_TOKEN": "test",
 				"GITHUB_TOKEN": "test",
@@ -50,12 +51,12 @@ func TestNewReq(t *testing.T) {
 			},
 		},
 		"no arguments": {
-			args: []string{"cmd"},
-			err:  "usage: cmd <inFile> <repoName>",
+			args: []string{"cmd2"},
+			err:  "request must be set",
 			req:  &req{},
 		},
 		"missing file": {
-			args: []string{"cmd", "test", "test"},
+			args: []string{"cmd3", "-request", "test", "-format", "terraform", "-repo", "test"},
 			env: map[string]string{
 				"CIRCLE_TOKEN": "test",
 				"GITHUB_TOKEN": "test",
@@ -64,9 +65,67 @@ func TestNewReq(t *testing.T) {
 				"SN_USER":      "test",
 			},
 			err: "open test: no such file or directory",
-			req: &req{
-				email: "grace-staff@gsa.gov",
+			req: &req{},
+		},
+		"CIRCLE_TOKEN not set": {
+			args: []string{"cmd4", "-request", "test", "-format", "terraform", "-repo", "test"},
+			env: map[string]string{
+				"CIRCLE_TOKEN": "",
+				"GITHUB_TOKEN": "test",
+				"SN_INSTANCE":  "test",
+				"SN_PASSWORD":  "test",
+				"SN_USER":      "test",
 			},
+			err: "environment variable CIRCLE_TOKEN must be set if format is 'terraform'",
+			req: &req{},
+		},
+		"GITHUB_TOKEN not set": {
+			args: []string{"cmd5", "-request", "test", "-format", "terraform", "-repo", "test"},
+			env: map[string]string{
+				"CIRCLE_TOKEN": "test",
+				"GITHUB_TOKEN": "",
+				"SN_INSTANCE":  "test",
+				"SN_PASSWORD":  "test",
+				"SN_USER":      "test",
+			},
+			err: "environment variable GITHUB_TOKEN must be set if format is 'terraform'",
+			req: &req{},
+		},
+		"SN_INSTANCE not set": {
+			args: []string{"cmd6", "-request", "test", "-format", "terraform", "-repo", "test"},
+			env: map[string]string{
+				"CIRCLE_TOKEN": "test",
+				"GITHUB_TOKEN": "test",
+				"SN_INSTANCE":  "",
+				"SN_PASSWORD":  "test",
+				"SN_USER":      "test",
+			},
+			err: "environment variable SN_INSTANCE must be set if format is 'terraform'",
+			req: &req{},
+		},
+		"SN_PASSWORD not set": {
+			args: []string{"cmd7", "-request", "test", "-format", "terraform", "-repo", "test"},
+			env: map[string]string{
+				"CIRCLE_TOKEN": "test",
+				"GITHUB_TOKEN": "test",
+				"SN_INSTANCE":  "test",
+				"SN_PASSWORD":  "",
+				"SN_USER":      "test",
+			},
+			err: "environment variable SN_PASSWORD must be set if format is 'terraform'",
+			req: &req{},
+		},
+		"SN_USER not set": {
+			args: []string{"cmd8", "-request", "test", "-format", "terraform", "-repo", "test"},
+			env: map[string]string{
+				"CIRCLE_TOKEN": "test",
+				"GITHUB_TOKEN": "test",
+				"SN_INSTANCE":  "test",
+				"SN_PASSWORD":  "test",
+				"SN_USER":      "",
+			},
+			err: "environment variable SN_USER must be set if format is 'terraform'",
+			req: &req{},
 		},
 	}
 	for name, tc := range tt {
@@ -105,99 +164,6 @@ func TestCheckErr(t *testing.T) {
 	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
 
-func TestCheck(t *testing.T) {
-	oldArgs, oldEnv := captureEnv()
-	tt := map[string]struct {
-		args []string
-		env  map[string]string
-		err  string
-	}{
-		"happy": {
-			args: []string{"cmd", "testdata/test.json", "test"},
-			env: map[string]string{
-				"CIRCLE_TOKEN": "test",
-				"GITHUB_TOKEN": "test",
-				"SN_INSTANCE":  "test",
-				"SN_PASSWORD":  "test",
-				"SN_USER":      "test",
-			},
-		},
-		"no arguments": {
-			args: []string{"cmd"},
-			err:  "usage: cmd <inFile> <repoName>",
-		},
-		"CIRCLE_TOKEN not set": {
-			args: []string{"cmd", "test", "test"},
-			env: map[string]string{
-				"CIRCLE_TOKEN": "",
-				"GITHUB_TOKEN": "test",
-				"SN_INSTANCE":  "test",
-				"SN_PASSWORD":  "test",
-				"SN_USER":      "test",
-			},
-			err: "environment variable CIRCLE_TOKEN must be set",
-		},
-		"GITHUB_TOKEN not set": {
-			args: []string{"cmd", "test", "test"},
-			env: map[string]string{
-				"CIRCLE_TOKEN": "test",
-				"GITHUB_TOKEN": "",
-				"SN_INSTANCE":  "test",
-				"SN_PASSWORD":  "test",
-				"SN_USER":      "test",
-			},
-			err: "environment variable GITHUB_TOKEN must be set",
-		},
-		"SN_INSTANCE not set": {
-			args: []string{"cmd", "test", "test"},
-			env: map[string]string{
-				"CIRCLE_TOKEN": "test",
-				"GITHUB_TOKEN": "test",
-				"SN_INSTANCE":  "",
-				"SN_PASSWORD":  "test",
-				"SN_USER":      "test",
-			},
-			err: "environment variable SN_INSTANCE must be set",
-		},
-		"SN_PASSWORD not set": {
-			args: []string{"cmd", "test", "test"},
-			env: map[string]string{
-				"CIRCLE_TOKEN": "test",
-				"GITHUB_TOKEN": "test",
-				"SN_INSTANCE":  "test",
-				"SN_PASSWORD":  "",
-				"SN_USER":      "test",
-			},
-			err: "environment variable SN_PASSWORD must be set",
-		},
-		"SN_USER not set": {
-			args: []string{"cmd", "test", "test"},
-			env: map[string]string{
-				"CIRCLE_TOKEN": "test",
-				"GITHUB_TOKEN": "test",
-				"SN_INSTANCE":  "test",
-				"SN_PASSWORD":  "test",
-				"SN_USER":      "",
-			},
-			err: "environment variable SN_USER must be set",
-		},
-	}
-	for name, tc := range tt {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			resetEnv(tc.args, tc.env)
-			err := check()
-			if tc.err == "" && err != nil {
-				t.Errorf("check() failed: unexpected error: %v", err)
-			} else if tc.err != "" && (err == nil || tc.err != err.Error()) {
-				t.Errorf("check() failed: expected error: %s\nGot: %v\n", tc.err, err)
-			}
-		})
-	}
-
-	resetEnv(oldArgs, oldEnv)
-}
-
 func TestRandStart(t *testing.T) {
 	min := backupStartHour * 60
 	max := int(math.Abs(float64(backupEndHour-backupStartHour)))*60 - backupWindowSize
@@ -221,4 +187,39 @@ func TestMaintenanceWindow(t *testing.T) {
 	if w != expected {
 		t.Errorf("maintenanceWindow() failed: expecting: %q got: %q", expected, w)
 	}
+}
+
+func TestHandleRITM(t *testing.T) {
+	oldArgs, oldEnv := captureEnv()
+	tt := map[string]struct {
+		args []string
+		env  map[string]string
+		err  string
+		req  *req
+	}{
+		"happy": {
+			args: []string{"cmd1", "-request", filepath.Join("testdata", "test.json"),
+				"-format", "json", "-outfile", filepath.Join(os.TempDir(), "test_out.json")},
+			env: map[string]string{
+				"CIRCLE_TOKEN": "test",
+				"GITHUB_TOKEN": "test",
+				"SN_INSTANCE":  "test",
+				"SN_PASSWORD":  "test",
+				"SN_USER":      "test",
+			},
+		},
+	}
+	for name, tc := range tt {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			resetEnv(tc.args, tc.env)
+			handleRITM()
+			err := os.Remove(filepath.Join(os.TempDir(), "test_out.json"))
+			if err != nil {
+				t.Fatalf("handleRITM() failed. Unable to remove testFile: %v", err)
+			}
+		})
+	}
+
+	resetEnv(oldArgs, oldEnv)
 }

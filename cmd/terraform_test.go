@@ -7,33 +7,39 @@ import (
 )
 
 func TestGenerateTerraform(t *testing.T) {
-	ritm, err := parseRITM("testdata/test.json")
+	var r req
+	r.inFile = filepath.Join("testdata", "test.json")
+
+	err := r.parseRITM()
 	if err != nil {
 		t.Fatalf("generateTerraform() failed. Unable to parse test data: %v", err)
 	}
 
-	tf := ritm.generateTerraform()
+	tf := r.ritm.generateTerraform()
 
 	expected := "(required) RDS user password"
-	got := tf.Map["variable"].([2]map[string]interface{})[0]["test_rds_db_password"].(map[string]interface{})["description"]
+	got := tf.Map["variable"].([2]map[string]interface{})[0]["test_db_password"].(map[string]interface{})["description"]
 	if expected != got {
-		t.Errorf("generateTerraform() failed. Unable to parse test data. Expected: %s\nGot(%T): %s\n", expected, got, got)
+		t.Errorf("generateTerraform() failed. Unable to parse test data. Expected: %s\nGot(%T): %v\n", expected, got, got)
 	}
 
 	expected = "(optional) List of CIDR blocks from which to manage RDS"
-	got = tf.Map["variable"].([2]map[string]interface{})[1]["test_rds_mgmt_cidr_blocks"].(map[string]interface{})["description"]
+	got = tf.Map["variable"].([2]map[string]interface{})[1]["test_mgmt_cidr_blocks"].(map[string]interface{})["description"]
 	if expected != got {
 		t.Errorf("generateTerraform() failed. Unable to parse test data. Expected: %s\nGot: %s\n", expected, got)
 	}
 }
 
 func TestWriteFile(t *testing.T) {
-	ritm, err := parseRITM("testdata/test.json")
+	var r req
+	r.inFile = filepath.Join("testdata", "test.json")
+
+	err := r.parseRITM()
 	if err != nil {
 		t.Fatalf("*terraform.writeFile() failed. Unable to parse test data: %v", err)
 	}
 
-	tf := ritm.generateTerraform()
+	tf := r.ritm.generateTerraform()
 	fileName := filepath.Join(os.TempDir(), "tf.json")
 
 	err = tf.writeFile(fileName)

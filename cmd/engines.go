@@ -5,10 +5,11 @@ func (tf *terraform) rdsEngineDefaults() map[string]interface{} {
 		"mysql5.7": map[string]interface{}{
 			"description":                     "MySQL Community Edition",
 			"engine":                          "mysql",
-			"engine_version":                  "5.7.28",
+			"engine_version":                  "5.7.30",
 			"family":                          "mysql5.7",
 			"major_engine_version":            "5.7",
-			"enabled_cloudwatch_logs_exports": [...]string{"audit", "error", "general", "slowquery"},
+			"port":                            3306,
+			"enabled_cloudwatch_logs_exports": []string{"audit", "error", "general", "slowquery"},
 			"small": map[string]interface{}{
 				"instance_class":    "db.m5.large",
 				"allocated_storage": 50,
@@ -24,11 +25,12 @@ func (tf *terraform) rdsEngineDefaults() map[string]interface{} {
 		},
 		"mysql8.0": map[string]interface{}{
 			"engine":                          "mysql",
-			"engine_version":                  "8.0.17",
+			"engine_version":                  "8.0.20",
 			"family":                          "mysql8.0",
 			"major_engine_version":            "8.0",
+			"port":                            3306,
 			"description":                     "MySQL Community Edition",
-			"enabled_cloudwatch_logs_exports": [...]string{"error", "general", "slowquery"},
+			"enabled_cloudwatch_logs_exports": []string{"error", "general", "slowquery"},
 			"small": map[string]interface{}{
 				"instance_class":    "db.m5.large",
 				"allocated_storage": 50,
@@ -44,11 +46,12 @@ func (tf *terraform) rdsEngineDefaults() map[string]interface{} {
 		},
 		"postgres11": map[string]interface{}{
 			"engine":                          "postgres",
-			"engine_version":                  "11.6",
+			"engine_version":                  "11.8",
 			"family":                          "postgres11",
 			"major_engine_version":            "11",
+			"port":                            5432,
 			"description":                     "PostgreSQL",
-			"enabled_cloudwatch_logs_exports": [...]string{"postgresql", "upgrade"},
+			"enabled_cloudwatch_logs_exports": []string{"postgresql", "upgrade"},
 			"small": map[string]interface{}{
 				"instance_class":    "db.m5.large",
 				"allocated_storage": 20,
@@ -64,11 +67,12 @@ func (tf *terraform) rdsEngineDefaults() map[string]interface{} {
 		},
 		"postgres12": map[string]interface{}{
 			"engine":                          "postgres",
-			"engine_version":                  "12.2",
+			"engine_version":                  "12.3",
 			"family":                          "postgres12",
 			"major_engine_version":            "12",
+			"port":                            5432,
 			"description":                     "PostgreSQL",
-			"enabled_cloudwatch_logs_exports": [...]string{"postgresql", "upgrade"},
+			"enabled_cloudwatch_logs_exports": []string{"postgresql", "upgrade"},
 			"small": map[string]interface{}{
 				"instance_class":    "db.m5.large",
 				"allocated_storage": 20,
