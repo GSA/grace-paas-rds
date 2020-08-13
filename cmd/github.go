@@ -28,7 +28,7 @@ func (r *req) pullRequest() (*github.PullRequest, error) {
 	owner := "GSA"
 	serviceNowURL := fmt.Sprintf("https://%s/nav_to.do?uri=sc_req_item.do%%3Fsys_id%%3D", os.Getenv("SN_INSTANCE"))
 	prBody := fmt.Sprintf("[%s](%s%s)\n- %s %s RDS in %s account",
-		r.ritm.Number, serviceNowURL, r.ritm.SysID, r.ritm.Size, r.ritm.Engine, r.ritm.Account)
+		r.ritm.Number, serviceNowURL, r.ritm.SysID, r.ritm.DevSize, r.ritm.Engine, r.ritm.Account)
 	newPR := &github.NewPullRequest{
 		Title: &r.ritm.Number,
 		Head:  &commitBranch,

@@ -82,9 +82,9 @@ func (tf *terraform) rdsModule(ritm *ritm) map[string]interface{} {
 	defaults["engine"] = engine
 	defaults["engine_version"] = options["engine_version"]
 	defaults["enabled_cloudwatch_logs_exports"] = options["enabled_cloudwatch_logs_exports"]
-	defaults["instance_class"] = options[ritm.Size].(map[string]interface{})["instance_class"]
+	defaults["instance_class"] = options[ritm.DevSize].(map[string]interface{})["instance_class"]
 	defaults["kms_key_id"] = "${aws_kms_key." + resourceID + ".arn}"
-	defaults["allocated_storage"] = options[ritm.Size].(map[string]interface{})["allocated_storage"]
+	defaults["allocated_storage"] = options[ritm.DevSize].(map[string]interface{})["allocated_storage"]
 	defaults["name"] = ritm.Name
 	defaults["username"] = ritm.Username
 	defaults["password"] = "${var." + resourceID + "_db_password}"
@@ -104,7 +104,7 @@ func (tf *terraform) rdsModule(ritm *ritm) map[string]interface{} {
 	}
 	defaults["use_parameter_group_name_prefix"] = false
 	*/
-	if ritm.MultiAZ == yes {
+	if ritm.DevMultiAZ == yes {
 		defaults["multi_az"] = true
 		defaults["subnet_ids"] = "${module.network.back_vpc_subnet_ids}"
 	}
